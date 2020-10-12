@@ -329,11 +329,14 @@ def convolutional_input_backpropagation(actual_layer_outputs, previous_layer_ker
     outputs_col = actual_layer_outputs.shape[2]
        
     grad_k = np.empty((batches, k_row, k_col, n_kernels))
+
+    print('i',grad_loss_outputs.shape,grad_outputs_z.shape)
+
     for batch in range(0,batches):
         for nk in range(0, n_kernels):
             for i in range(0, k_row):
                 for j in range(0,k_col):
-                    grad_k[batch, i, j] = np.sum((grad_loss_outputs[batch][:,:,nk] * grad_outputs_z[batch][:,:,nk]) *  previous_layer_outputs[batch][i:i+outputs_row,j:j+outputs_col])
+                    grad_k[batch, i, j] = np.sum((grad_loss_outputs[batch][:,:,nk] * grad_outputs_z[:,:,nk]) *  previous_layer_outputs[batch][i:i+outputs_row,j:j+outputs_col])
     
     #Step 4 - Calculate the average of the gradients
     grad_loss_kernel = np.empty((k_row,k_col, n_kernels))
@@ -346,7 +349,6 @@ def convolutional_input_backpropagation(actual_layer_outputs, previous_layer_ker
     
     #Step 5 - Calculate the Gradient of each z w.r.t each bias
     grad_z_bias = 1
-    
     #Step 6 - Calculate the Gradient the loss w.r.t each bias using the chain rule
     grad_b = np.empty((batches, n_kernels))
     for batch in range(0,batches):
