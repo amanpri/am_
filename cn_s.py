@@ -336,7 +336,14 @@ def convolutional_input_backpropagation(actual_layer_outputs, previous_layer_ker
         for nk in range(0, n_kernels):
             for i in range(0, k_row):
                 for j in range(0,k_col):
-                    grad_k[batch, i, j] = np.sum((grad_loss_outputs[batch][:,:,nk] * grad_outputs_z[:,:,nk]) *  previous_layer_outputs[batch][i:i+outputs_row,j:j+outputs_col])
+                    
+                    
+                    grad_k[batch, i, j] = np.sum((grad_loss_outputs[batch][:,:,nk] * np.transpose(grad_outputs_z[:,:,nk])) *  previous_layer_outputs[batch][i:i+outputs_row,j:j+outputs_col])
+                    #grad_k[batch, i, j] = np.sum(np.expand_dims((grad_loss_outputs[batch][:,:,nk] * np.transpose(grad_outputs_z[:,:,nk])), axis=2) *  previous_layer_outputs[batch][i:i+outputs_row,j:j+outputs_col])
+                    #(28,50) (1,28) 
+                    #grad_k[batch, i, j] = np.sum((grad_loss_outputs[batch][:,:,nk] * grad_outputs_z[:,:,nk]) *  previous_layer_outputs[batch][i:i+outputs_row,j:j+outputs_col])
+     
+                    #grad_k[batch, i, j] = np.sum((grad_loss_outputs[batch][:,:,nk] * grad_outputs_z[:,:,nk]) *  previous_layer_outputs[batch][i:i+outputs_row,j:j+outputs_col])
     
     #Step 4 - Calculate the average of the gradients
     grad_loss_kernel = np.empty((k_row,k_col, n_kernels))
@@ -399,26 +406,32 @@ def fit_CNN_small(training_features, training_labels, test_features, test_labels
     for epoch in range(0, epochs):
         for i in range(0,number_of_batches-1):
             # Forward Pass
-            l1_inputs = training_features[i*batch_size:i*batch_size + batch_size]
-            l2_inputs = conv_forward_pass(l1_inputs, l1_kernel, l1_bias)
-            #l3_inputs = maxpool_forward_pass(l2_inputs, 2, 2)  ## maxpool not defined hence bypassing
+            l1_inputs = training_features[i*batch_size:i*batch_size + batch_size] #X_train shape
+            l2_inputs = conv_forward_pass(l1_inputs, l1_kernel, l1_bias) #shape (1, 28, 50, 3) for image data 
+            #TypeError: Invalid shape (1, 28, 50) for image data
+            #plt.imshow(l2_inputs)
+            #plt.show()
+            #print(l2_inputs.shape)
             l4_inputs = flatten_foward_pass(l2_inputs)
-            print(l4_inputs.shape)
+            print(l4_inputs.size)
             l4_weights =np.random.randn(l4_inputs.shape[-1],output_nodes) #338 is the input shape from the flatten layer
             outputs = output_foward_pass(l4_inputs, output_nodes, l4_weights, l4_bias)
-
+            print(outputs.shape) #(1,2)
+            print(outputs.size) #2
             # Calculate Loss
-            batch_label = training_labels[i*batch_size:i*batch_size + batch_size]
+            batch_label = training_labels[i*batch_size:i*batch_size + batch_size] #Epoch: 0 ,Batch: 1 ,loss: 0.0000 
             batch_loss = loss_SSE(outputs, batch_label)
             sys.stdout.write('\rEpoch: %d ,Batch: %d ,loss: %.4f '%(epoch,i,batch_loss))
             sys.stdout.flush()
-
-
             # Backpropagation
             grad_l4_weights, grad_l4_bias, grad_l4_inputs = output_backpropagation(outputs, batch_label, l4_weights , l4_bias, l4_inputs)
-            grad_l3_inputs = inverse_flatten(grad_l4_inputs, 18,40,1)
-            #grad_l2_inputs = inverse_maxpool(grad_l3_inputs, l3_inputs, l2_inputs, 2, 2)
+            print(grad_l4_weights.shape,grad_l4_bias.shape, grad_l4_inputs.shape)
+            grad_l3_inputs = inverse_flatten(grad_l4_inputs, 28,50,1)
+            print(grad_l3_inputs.shape) #(1, 28, 50, 1)
+            #(28,50) (1,28) 
             grad_l1_kernel, grad_l1_bias = convolutional_input_backpropagation(l2_inputs, l1_kernel, l1_bias, l1_inputs, grad_l3_inputs)
+            
+            
 
             #Updating Kernel, weights and biases
             l1_kernel = l1_kernel - (lr*grad_l1_kernel)
